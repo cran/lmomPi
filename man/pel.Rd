@@ -2,17 +2,25 @@
 % Please edit documentation in R/pel.R
 \name{pel}
 \alias{pel}
-\alias{pel}
 \alias{pel_x}
-\alias{pel}
 \alias{pel_lmom}
 \title{Generic function for \code{\link{pel...}}}
 \usage{
-pel(distrib = c("exp", "gam", "gev", "glo", "gpa", "gno", "gum", "kap", "ln3",
-  "nor", "pe3", "wak", "wei"), lmom = NULL,
-  probability_distribution_attrname = "probability_distrib", x = NULL,
-  nmom = 5, sort.data = TRUE, ratios = sort.data, trim = 0,
-  indices = NULL, spi.scale = NA, ...)
+pel(
+  distrib = c("exp", "gam", "gev", "glo", "gpa", "gno", "gum", "kap", "ln3", "nor",
+    "pe3", "wak", "wei"),
+  lmom = NULL,
+  probability_distribution_attrname = "probability_distrib",
+  x = NULL,
+  nmom = 5,
+  sort.data = TRUE,
+  ratios = sort.data,
+  trim = 0,
+  indices = NULL,
+  spi.scale = NA,
+  correction = NULL,
+  ...
+)
 
 pel_x(x, ...)
 
@@ -32,6 +40,11 @@ pel_lmom(lmom, ...)
 \item{indices}{optional index or tag character vector of the same length of \code{x} used as INDEX for \code{\link{tapply}}. It is used to fit different probability distribution in one sample time series (e. g. months in an year).}
 
 \item{spi.scale}{integer value or \code{NA}. If it is greater than 1, \code{x} is filtered with the sum of a generic element of \code{x} and the previous \code{spi.scale-1} ones (e.g. SPI-3,SPI-6, etc. ). Default is \code{NA} (no filtering) which is equivalent to \code{spi.scale=1}.}
+
+\item{correction}{numeric value correction for the 3rd (and higher) L-moment estimation. Default is \code{NULL} , generally it is not used. It is used and suggested to be \code{10^(-10)} in case of a massive function use with \code{lmom=NULL} (e.g. raster cell or zonal statistics).}
+}
+\value{
+A numeric vector containing the  parameters of the selected probability distribution. It is a list in case of selection of several probability distributions (i.e. \code{length(distrib)>1}).
 }
 \description{
 Generic function for \code{\link{pel...}}: probability distribution fitting with L-Moments
@@ -52,7 +65,7 @@ Generic function for \code{\link{pel...}}: probability distribution fitting with
  "nor","pe3","wak","wei")
 
  out_list <- pel(distrib=distrib,lmom=lmom)
-
+ \donttest{
  library(rasterList)
  precff <- system.file("map/Mekrou_precipitation.grd", package="rasterList")
 	precs <- stack(precff)
@@ -69,7 +82,7 @@ Generic function for \code{\link{pel...}}: probability distribution fitting with
  ### example with PEL when x is always 0 or a fixed constant
  xx <- array(0,50)
  out_xx <- pel_x(x=xx,distrib=distrib_prec2)
- 
+ }
 
 
 }
