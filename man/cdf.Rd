@@ -13,6 +13,7 @@ cdf(
   indices = NULL,
   return.as.spi = FALSE,
   spi.scale = NA,
+  distrib = NA,
   ...
 )
 
@@ -30,6 +31,8 @@ cdf.spi(x, para, ...)
 \item{return.as.spi}{logical parameter. Default is \code{FALSE}. If it is \code{TRUE} probability value is transformed to a normalized random variable through standard \code{\link{qnorm}}, as for Standard Precipitation Index (SPI) (\url{https://climatedataguide.ucar.edu/climate-data/standardized-precipitation-index-spi}).}
 
 \item{spi.scale}{integer value or \code{NA}. If it greater than 1 \code{x} is filtered with the sum of a generic element of \code{x} and the previous \code{spi.scale-1} ones (e.g. SPI-3,SPI-6, etc. ). Default is \code{NA} (no filtering) which is equivalent to \code{spi.scale=1}.}
+
+\item{distrib}{character string indicating the probability distribution, it can be used in case \code{para} has no attributes. Default is \code{NA} and distribution info are all passed through \code{para}.}
 }
 \value{
 A vector of cumulated probability value(s) or SPI-like Gaussianized values. It is a list of vectors in case of several probability parametric distribution functions (i.e. \code{para} is a list and \code{length(para)>1}).
@@ -49,51 +52,33 @@ distrib <- c("exp","gam","gev","glo","gpa","gno","gum","kap",
 para_list <- pel(distrib=distrib,lmom=lmom)
 cdf_list <- cdf(para=para_list,x=airquality$Ozone)
 
- \donttest{
- library(rasterList)
- precff <- system.file("map/Mekrou_precipitation.grd", package="rasterList")
-	precs <- stack(precff)
- prec_point <- precs[143][,]
+cdf_gam <- cdf(para=para_list$gam,x=airquality$Ozone)
+cdf_gam2 <- cdf(para=para_list$gam,x=airquality$Ozone,distrib="gam")
 
- ## month index 
- month <- as.character(as.Date(names(prec_point),format="X\%Y.\%m.\%d"),format="M\%m")
- prec_point[(prec_point<1) & (month=="M01")] <- 0
+if (any(cdf_gam!=cdf_gam2,na.rm=TRUE)) stop("Any possible errors after  0.6.3 package updates!") 
 
- distrib_prec2 <- c("gam")
- para_vvv <- pel(x=prec_point,indices=month,distrib=distrib_prec2)
- cdf_      <- cdf(x=prec_point,indices=month,para=para_vvv)      
-	spi_      <- spi.cdf(x=prec_point,indices=month,para=para_vvv)  
-
- ####  
-
- para_raster <- rasterList(precs,FUN=pel_x,indices=month,distrib=distrib_prec2)
- spi1_raster <- stack(RasterListApply(x=rasterList(precs),para=para_raster,
-                indices=list(month),FUN=spi.cdf))
-
-  para_raster_spi3 <- rasterList(precs,FUN=pel_x,indices=month,distrib=distrib_prec2,
-						spi.scale=3)
-  spi3_raster <- stack(RasterListApply(x=rasterList(precs),para=para_raster_spi3,
-                indices=list(month),spi.scale=3,FUN=spi.cdf))
-}
-
+\donttest{
 
 ## Comparison with the SPI/SPEI algorithms:  'SPEI::spi' ('SPEI' package)
-library(SPEI)
-\donttest{
-data(wichita)
 
-distrib_wichita <- 'pe3'
-spi.scale <- 1
+if (requireNamespace("SPEI",quietly = TRUE)) {
+ library(SPEI)
+ data(wichita)
 
-month_wichita <- sprintf("M\%02d",wichita$MONTH)
-para_whichita  <- pel(x=wichita$PRCP,indices=month_wichita,distrib=distrib_wichita,
+ distrib_wichita <- 'pe3'
+ spi.scale <- 1
+
+ month_wichita <- sprintf("M\%02d",wichita$MONTH)
+ para_whichita  <- pel(x=wichita$PRCP,indices=month_wichita,distrib=distrib_wichita,
 						spi.scale=spi.scale)
-spi_wichita   <- spi.cdf(x=wichita$PRCP,indices=month_wichita,para=para_whichita,
+ spi_wichita   <- spi.cdf(x=wichita$PRCP,indices=month_wichita,para=para_whichita,
 						spi.scale=spi.scale)
-spi_wichita_speipkg   <- spi(data=wichita$PRCP,distrib='PearsonIII',scale=spi.scale)
-difference <- spi_wichita-spi_wichita_speipkg$fitted
+ spi_wichita_speipkg   <- spi(data=wichita$PRCP,distrib='PearsonIII',scale=spi.scale)
+ difference <- spi_wichita-spi_wichita_speipkg$fitted
+}
 
 }
+
 }
 \seealso{
 \code{\link{pel}},\code{\link{cdfexp}},\code{\link{cdfgam}},\code{\link{cdfgev}},\code{\link{cdfglo}},

@@ -11,6 +11,7 @@ NULL
 #' @param indices vector of string working as factors or indices, e g. the month names or similar. It must be of the same length of \code{x} or the length equal to 1 other \code{NULL}, if not used. If used, it computes \code{cdf} for each factor. 
 #' @param return.as.spi logical parameter. Default is \code{FALSE}. If it is \code{TRUE} probability value is transformed to a normalized random variable through standard \code{\link{qnorm}}, as for Standard Precipitation Index (SPI) (\url{https://climatedataguide.ucar.edu/climate-data/standardized-precipitation-index-spi}).
 #' @param spi.scale integer value or \code{NA}. If it greater than 1 \code{x} is filtered with the sum of a generic element of \code{x} and the previous \code{spi.scale-1} ones (e.g. SPI-3,SPI-6, etc. ). Default is \code{NA} (no filtering) which is equivalent to \code{spi.scale=1}.
+#' @param distrib character string indicating the probability distribution, it can be used in case \code{para} has no attributes. Default is \code{NA} and distribution info are all passed through \code{para}.  
 #' @export
 #' 
 #' @return A vector of cumulated probability value(s) or SPI-like Gaussianized values. It is a list of vectors in case of several probability parametric distribution functions (i.e. \code{para} is a list and \code{length(para)>1}). 
@@ -36,62 +37,44 @@ NULL
 #' para_list <- pel(distrib=distrib,lmom=lmom)
 #' cdf_list <- cdf(para=para_list,x=airquality$Ozone)
 #' 
-#'  \donttest{
-#'  library(rasterList)
-#'  precff <- system.file("map/Mekrou_precipitation.grd", package="rasterList")
-#' 	precs <- stack(precff)
-#'  prec_point <- precs[143][,]
+#' cdf_gam <- cdf(para=para_list$gam,x=airquality$Ozone)
+#' cdf_gam2 <- cdf(para=para_list$gam,x=airquality$Ozone,distrib="gam")
 #' 
-#'  ## month index 
-#'  month <- as.character(as.Date(names(prec_point),format="X%Y.%m.%d"),format="M%m")
-#'  prec_point[(prec_point<1) & (month=="M01")] <- 0
+#' if (any(cdf_gam!=cdf_gam2,na.rm=TRUE)) stop("Any possible errors after  0.6.3 package updates!") 
 #' 
-#'  distrib_prec2 <- c("gam")
-#'  para_vvv <- pel(x=prec_point,indices=month,distrib=distrib_prec2)
-#'  cdf_      <- cdf(x=prec_point,indices=month,para=para_vvv)      
-#' 	spi_      <- spi.cdf(x=prec_point,indices=month,para=para_vvv)  
-#' 
-#'  ####  
-#'
-#'  para_raster <- rasterList(precs,FUN=pel_x,indices=month,distrib=distrib_prec2)
-#'  spi1_raster <- stack(RasterListApply(x=rasterList(precs),para=para_raster,
-#'                 indices=list(month),FUN=spi.cdf))
-#'
-#'   para_raster_spi3 <- rasterList(precs,FUN=pel_x,indices=month,distrib=distrib_prec2,
-#' 						spi.scale=3)
-#'   spi3_raster <- stack(RasterListApply(x=rasterList(precs),para=para_raster_spi3,
-#'                 indices=list(month),spi.scale=3,FUN=spi.cdf))
-#' }
-#' 
-#' 
-#' ## Comparison with the SPI/SPEI algorithms:  'SPEI::spi' ('SPEI' package)
-#' library(SPEI)
 #' \donttest{
-#' data(wichita)
+#'
+#' ## Comparison with the SPI/SPEI algorithms:  'SPEI::spi' ('SPEI' package)
+
+#'
+#' if (requireNamespace("SPEI",quietly = TRUE)) {
+#'  library(SPEI)
+#'  data(wichita)
 #' 
-#' distrib_wichita <- 'pe3'
-#' spi.scale <- 1
+#'  distrib_wichita <- 'pe3'
+#'  spi.scale <- 1
 #' 
-#' month_wichita <- sprintf("M%02d",wichita$MONTH)
-#' para_whichita  <- pel(x=wichita$PRCP,indices=month_wichita,distrib=distrib_wichita,
+#'  month_wichita <- sprintf("M%02d",wichita$MONTH)
+#'  para_whichita  <- pel(x=wichita$PRCP,indices=month_wichita,distrib=distrib_wichita,
 #' 						spi.scale=spi.scale)
-#' spi_wichita   <- spi.cdf(x=wichita$PRCP,indices=month_wichita,para=para_whichita,
+#'  spi_wichita   <- spi.cdf(x=wichita$PRCP,indices=month_wichita,para=para_whichita,
 #' 						spi.scale=spi.scale)
-#' spi_wichita_speipkg   <- spi(data=wichita$PRCP,distrib='PearsonIII',scale=spi.scale)
-#' difference <- spi_wichita-spi_wichita_speipkg$fitted
+#'  spi_wichita_speipkg   <- spi(data=wichita$PRCP,distrib='PearsonIII',scale=spi.scale)
+#'  difference <- spi_wichita-spi_wichita_speipkg$fitted
+#' }
 #' 
 #' }
+#'
 
 
+cdf <- function(para,x,probability_distribution_attrname="probability_distrib",indices=NULL,return.as.spi=FALSE,spi.scale=NA,distrib=NA,...) {
+	
+	
+	
 
-cdf <- function(para,x,probability_distribution_attrname="probability_distrib",indices=NULL,return.as.spi=FALSE,spi.scale=NA,...) {
-	
-	
-	
-	
 	out <- try(stop("Generic Error!!"),silent=TRUE)
 	
-	
+	if (is.null(distrib)) distrib <- NA
 	## ADDED BY ECOR ON 2017-06-16
 	if (length(spi.scale)<1) spi.scale <- as.numeric(NA)
 	if ((class(spi.scale) %in% c("numeric","integer")) & !(is.na(spi.scale))) {
@@ -148,7 +131,7 @@ cdf <- function(para,x,probability_distribution_attrname="probability_distrib",i
 				
 			}
 		
-			out[[iin]] <- lapply(X=para[[iin]],FUN=cdf,x=x[wi],probability_distribution_attrname=probability_distribution_attrname,indices=NULL,return.as.spi=return.as.spi,...)
+			out[[iin]] <- lapply(X=para[[iin]],FUN=cdf,x=x[wi],probability_distribution_attrname=probability_distribution_attrname,indices=NULL,return.as.spi=return.as.spi,distrib=distrib,...)
 			attr(out[[iin]],"indices") <- wi
 		}	
 		
@@ -176,7 +159,7 @@ cdf <- function(para,x,probability_distribution_attrname="probability_distrib",i
 		
 	} else {
 		
-		distrib <- attr(para,probability_distribution_attrname) 	
+		if (is.na(distrib)) distrib <- attr(para,probability_distribution_attrname) 	
 		fundist <- get(paste0("cdf",distrib))
 			
 		out <- fundist(x=x,para=para,...)
